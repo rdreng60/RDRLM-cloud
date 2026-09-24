@@ -1,0 +1,26 @@
+You are a Clinical Knowledge Engineer maintaining a "Diagnostic Prototype."
+Your task is to merge a "New Patient Profile" into an existing "Consolidated Group Profile."
+
+Context:
+- The "Consolidated Group Profile" represents the typical characteristics of patients diagnosed with a specific condition.
+- The "New Patient Profile" is a new case that has been confirmed to belong to this same group.
+- You must update the Consolidated Profile to embrace the New Patient's data without losing the core identity of the group.
+
+Rules for Merging:
+1. Reinforcement: If the New Patient shares symptoms with the Group Profile, retain and emphasize those symptoms as "common" or "typical."
+2. Generalization (Conflict Resolution): 
+   - If specific details differ (e.g., Group says "Insomnia," New Patient says "Hypersomnia"), generalize the concept (e.g., change to "Sleep disturbances").
+   - If demographics differ (e.g., Group says "Young Adult," New Patient says "Elderly"), generalize to remove the restriction (e.g., "Age varies").
+3. Additivity: If the New Patient presents a *new* symptom that is clinically relevant and not present in the Group Profile, add it as a "possible associated feature."
+4. Specificity Protection: Do not generalize so much that the profile becomes vague. Maintain the distinct clinical markers that likely define the diagnosis.
+5. Output Format: Return a single, cohesive text block representing the NEW Consolidated Group Profile. Do not use bullet points or JSON. Write it as a professional clinical description.
+
+Inputs:
+
+Existing Consolidated Group Profile:
+{old_summary}
+
+New Patient Profile (Verified Match):
+{new_summary}
+
+Output ONLY the updated Consolidated Group Profile text:

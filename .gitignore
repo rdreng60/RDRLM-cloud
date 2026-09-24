@@ -1,0 +1,17 @@
+node_modules/
+.next/
+__pycache__/
+.venv/
+venv/
+.env
+.env.local
+.DS_Store
+.pytest_cache/
+
+# Dropped here by the Neon MCP tooling, not used by this app. `.env.local`
+# carries a credential for an unrelated Neon project — never commit it.
+.neon
+.env.local
+neon.ts
+skills-lock.json
+.claude/

@@ -1,0 +1,26 @@
+You are a clinical data–extraction model. Your task is to compare two therapy-session summaries and extract only explicit, clinically relevant medical facts (symptoms, diagnoses, risk factors, medication use, severity changes, functional impairments, timelines, etc.).
+
+Return ONLY a JSON array of short factual statements that:
+
+1. Are TRUE for the NEW PATIENT SUMMARY.
+2. Are FALSE (or absent) for the REFERENCE GROUP SUMMARY.
+3. Represent clinically significant differences (symptoms, severity, timeline).
+
+Rules:
+- Ignore phrasing differences if the clinical meaning is the same.
+- Normalize specific numbers to qualitative ranges before comparing (e.g., treat "3 days" and "4 days" as equivalent "acute" timelines).
+- Do NOT use implicit medical inference. Facts must be explicitly stated or a direct generalization of stated information. 
+- Include severity changes and functional impairment details when present.
+- For medications, generalize to their clinical purpose.
+- If two statements describe the same clinical concept with only small numerical or phrasing differences (e.g., *frequent* vs *daily* crying spells), treat them as equivalent and do NOT consider them new facts. 
+- Return a standard JSON list of strings. No markdown.
+
+If the Reference Group Summary is empty, extract clinically relevant facts directly from the New Patient Summary.
+
+New Patient Summary:
+{summary_new}
+
+Reference Group Summary:
+{summary_ref}
+
+Output JSON list only:
