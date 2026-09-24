@@ -55,6 +55,7 @@ export default function Workspace({
   const [freshNode, setFreshNode] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ kind: "ok" | "bad"; text: string } | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [inputMode, setInputMode] = useState<"transcript" | "summary">("transcript");
   const [pending, start] = useTransition();
 
   /** A decision has been taken; put the card away so it cannot be taken twice. */
@@ -270,15 +271,52 @@ export default function Workspace({
         )}
 
         <section className="mt-7">
-          <h2 className="text-[15px] font-medium">Input transcript</h2>
-          <form action={analyze} className="mt-3 flex flex-wrap items-center gap-3">
-            <input
-              type="file"
-              name="file"
-              accept=".docx"
-              required
-              className="field max-w-[380px] file:mr-3 file:rounded file:border-0 file:bg-[var(--panel)] file:px-3 file:py-1.5 file:text-[var(--foreground)]"
-            />
+          <h2 className="text-[15px] font-medium">Input case</h2>
+          <div className="mt-3 flex flex-wrap gap-4 text-[13px]" role="radiogroup">
+            {(
+              [
+                ["transcript", "Transcript (the model writes the summary)"],
+                ["summary", "Summary (already written)"],
+              ] as const
+            ).map(([value, label]) => (
+              <label key={value} className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  name="input-mode"
+                  checked={inputMode === value}
+                  onChange={() => setInputMode(value)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          {/* key resets the fields when the mode changes */}
+          <form key={inputMode} action={analyze} className="mt-3 flex flex-wrap items-start gap-3">
+            <input type="hidden" name="mode" value={inputMode} />
+            {inputMode === "transcript" ? (
+              <input
+                type="file"
+                name="file"
+                accept=".docx"
+                required
+                className="field max-w-[380px] file:mr-3 file:rounded file:border-0 file:bg-[var(--panel)] file:px-3 file:py-1.5 file:text-[var(--foreground)]"
+              />
+            ) : (
+              <div className="flex w-full max-w-[560px] flex-col gap-2">
+                <input
+                  type="file"
+                  name="file"
+                  accept=".docx,.txt"
+                  className="field max-w-[380px] file:mr-3 file:rounded file:border-0 file:bg-[var(--panel)] file:px-3 file:py-1.5 file:text-[var(--foreground)]"
+                />
+                <textarea
+                  name="text"
+                  rows={6}
+                  placeholder="…or paste the clinical summary here"
+                  className="field w-full"
+                />
+              </div>
+            )}
             <button className="btn-base" disabled={pending}>
               {pending ? "Working…" : "Analyse case"}
             </button>

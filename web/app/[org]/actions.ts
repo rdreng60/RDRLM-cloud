@@ -35,38 +35,75 @@ function failed(e: unknown): { ok: false; error: string } {
   return { ok: false, error: (e as Error).message ?? "Something went wrong." };
 }
 
-/** Upload → summary → walk the tree. */
+/** Plain text from an uploaded .docx or .txt. */
+async function readUpload(file: File): Promise<string> {
+  if (file.name.toLowerCase().endsWith(".txt")) return (await file.text()).trim();
+  const buffer = Buffer.from(await file.arrayBuffer());
+  return (await mammoth.extractRawText({ buffer })).value.trim();
+}
+
+/**
+ * Upload → summary → walk the tree.
+ *
+ * With mode "summary" the clinician brings the summary themselves (a .docx or
+ * .txt, or pasted text). It is used as-is: no summarize call, straight to the walk.
+ */
 export async function analyzeAction(
   orgId: string,
   formData: FormData
 ): Promise<Outcome<CaseState>> {
   try {
     const me = await actor(orgId);
-    const file = formData.get("file");
-    if (!(file instanceof File) || !file.size) {
-      return { ok: false, error: "Choose a .docx transcript first." };
+    const summaryGiven = formData.get("mode") === "summary";
+    const upload = formData.get("file");
+    const file = upload instanceof File && upload.size ? upload : null;
+
+    let summary: string;
+    let sourceFile: string;
+
+    if (summaryGiven) {
+      const pasted = String(formData.get("text") ?? "").trim();
+      if (file) {
+        try {
+          summary = await readUpload(file);
+        } catch {
+          return { ok: false, error: "That file could not be read as a .docx or .txt." };
+        }
+        sourceFile = file.name;
+      } else if (pasted) {
+        summary = pasted;
+        sourceFile = "pasted-summary";
+      } else {
+        return { ok: false, error: "Upload a summary file or paste the summary first." };
+      }
+      if (!summary) {
+        return { ok: false, error: "That summary appears to be empty." };
+      }
+    } else {
+      if (!file) {
+        return { ok: false, error: "Choose a .docx transcript first." };
+      }
+      let transcript: string;
+      try {
+        transcript = await readUpload(file);
+      } catch {
+        return { ok: false, error: "That file could not be read as a .docx." };
+      }
+      if (!transcript) {
+        return { ok: false, error: "That transcript appears to be empty." };
+      }
+
+      summary = (await engine.summarize(me, transcript)).summary;
+      if (!summary.trim()) {
+        return { ok: false, error: "The summary came back empty. Try again." };
+      }
+      sourceFile = file.name;
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    let transcript: string;
-    try {
-      transcript = (await mammoth.extractRawText({ buffer })).value.trim();
-    } catch {
-      return { ok: false, error: "That file could not be read as a .docx." };
-    }
-    if (!transcript) {
-      return { ok: false, error: "That transcript appears to be empty." };
-    }
-
-    const { summary } = await engine.summarize(me, transcript);
-    if (!summary.trim()) {
-      return { ok: false, error: "The summary came back empty. Try again." };
-    }
-
-    const interpretation = await engine.interpret(me, orgId, summary, file.name);
+    const interpretation = await engine.interpret(me, orgId, summary, sourceFile);
     return {
       ok: true,
-      data: { ...interpretation, summary, sourceFile: file.name },
+      data: { ...interpretation, summary, sourceFile },
     };
   } catch (e) {
     return failed(e);
