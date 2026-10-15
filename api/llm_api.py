@@ -7,7 +7,7 @@ from typing import Optional, List
 
 # --- Configuration ---
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
-MODEL_NAME = 'gemini-2.5-flash'
+MODEL_NAME = 'gemini-3.8-flash'
 # Prompt Files
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Go up one level to PSYCHOLOGY_RDR, then into data/prompts

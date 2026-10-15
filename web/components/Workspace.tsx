@@ -119,6 +119,23 @@ export default function Workspace({
     });
   };
 
+  /** First rule: no stored cases, so Algorithm 5 just proposes features of this case. */
+  const onSuggestFirst = () => {
+    if (!kase) return;
+    start(async () => {
+      const out = await differencesAction(orgId, kase.summary, null, kase.sourceFile);
+      if (!out.ok) {
+        setSuggestions([]);
+        setRejected([]);
+        setCardError(out.error);
+      } else {
+        setSuggestions(out.data.kept);
+        setRejected(out.data.rejected);
+        setCardError("");
+      }
+    });
+  };
+
   const onSave = (v: {
     conclusion: string;
     conditions: string[];
@@ -407,8 +424,10 @@ export default function Workspace({
           <FirstRule
             busy={pending}
             error={cardError}
-            onSave={(conclusion, conditions) =>
-              onSave({ conclusion, conditions, manual: conditions, side: "right" })
+            suggestions={suggestions}
+            onSuggest={onSuggestFirst}
+            onSave={(conclusion, conditions, manual) =>
+              onSave({ conclusion, conditions, manual, side: "right" })
             }
           />
         )}
@@ -469,14 +488,22 @@ export default function Workspace({
 function FirstRule({
   busy,
   error,
+  suggestions,
+  onSuggest,
   onSave,
 }: {
   busy: boolean;
   error: string;
-  onSave: (conclusion: string, conditions: string[]) => void;
+  suggestions: string[];
+  onSuggest: () => void;
+  onSave: (conclusion: string, conditions: string[], manual: string[]) => void;
 }) {
   const [conclusion, setConclusion] = useState("");
   const [conditions, setConditions] = useState("");
+  const [ticked, setTicked] = useState<string[]>([]);
+
+  const toggle = (c: string) =>
+    setTicked((t) => (t.includes(c) ? t.filter((x) => x !== c) : [...t, c]));
 
   return (
     <section className="surface mt-8 p-6 max-w-[620px]">
@@ -490,10 +517,32 @@ function FirstRule({
         value={conclusion}
         onChange={(e) => setConclusion(e.target.value)}
       />
+      <button className="btn-base mt-3" disabled={busy} onClick={onSuggest}>
+        {busy ? "Asking the model…" : "✨ Suggest conditions"}
+      </button>
+      {suggestions.length > 0 && (
+        <div className="mt-3 flex flex-col gap-1.5">
+          <p className="note">
+            Features the model found in this summary, each checked as true of it.
+            Nothing is stored yet, so they are not compared against other cases.
+          </p>
+          {suggestions.map((c) => (
+            <label key={c} className="flex items-start gap-2 text-[13px]">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={ticked.includes(c)}
+                onChange={() => toggle(c)}
+              />
+              {c}
+            </label>
+          ))}
+        </div>
+      )}
       <textarea
         className="field mt-3"
         rows={4}
-        placeholder={"Conditions, one per line\nChronic low mood\nSleep disturbance present"}
+        placeholder={"Your own conditions, one per line\nChronic low mood\nSleep disturbance present"}
         value={conditions}
         onChange={(e) => setConditions(e.target.value)}
       />
@@ -505,15 +554,15 @@ function FirstRule({
       <button
         className="btn-base mt-3"
         disabled={busy}
-        onClick={() =>
-          onSave(
-            conclusion.trim(),
-            conditions
-              .split("\n")
-              .map((c) => c.trim())
-              .filter(Boolean)
-          )
-        }
+        onClick={() => {
+          const typed = conditions
+            .split("\n")
+            .map((c) => c.trim())
+            .filter(Boolean);
+          // Ticked suggestions first, then typed ones, without repeats.
+          const all = [...new Set([...ticked.filter((c) => suggestions.includes(c)), ...typed])];
+          onSave(conclusion.trim(), all, typed);
+        }}
       >
         {busy ? "Checking…" : "Save the first rule"}
       </button>

@@ -77,7 +77,7 @@ Render, Railway or Cloud Run. Root directory `RDRM-cloud`, then:
 
 ```
 build:  pip install -r api/requirements.txt
-start:  uvicorn api.main:app --host 0.0.0.0 --port $PORT
+start:  uvicorn main:app --app-dir api --host 0.0.0.0 --port $PORT
 env:    DATABASE_URL, API_KEY (Gemini), ENGINE_API_KEY
 ```
 
